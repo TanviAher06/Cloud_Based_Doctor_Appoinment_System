@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediCloud - Cloud-Based Doctor Appointment & Telehealth Platform</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- QR Code Generator CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2563eb',
+                        secondary: '#0f172a',
+                        accent: '#0d9488',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .active-tab {
+            border-bottom: 2px solid #2563eb;
+            color: #2563eb;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <!-- Logo -->
+                <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('home')">
+                    <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white text-xl font-bold shadow-md shadow-blue-200">
+                        <i class="fa-solid fa-square-h"></i>
+                    </div>
+                    <div>
+                        <span class="text-xl font-bold text-slate-900 tracking-tight">MediCloud</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 ml-2">Cloud v2.4</span>
+                    </div>
+                </div>
+
+                <!-- Desktop Navigation Links -->
+                <nav class="hidden md:flex space-x-6 text-sm font-medium text-slate-600">
+                    <button id="nav-home" onclick="switchTab('home')" class="hover:text-blue-600 transition py-5">Find Doctors</button>
+                    <button id="nav-appointments" onclick="switchTab('appointments')" class="hover:text-blue-600 transition py-5">My Appointments</button>
+                    <button id="nav-admin" onclick="switchTab('admin')" class="hover:text-blue-600 transition py-5 flex items-center gap-1.5">
+                        <i class="fa-solid fa-user-doctor text-blue-600"></i> Doctor Portal
+                    </button>
+                </nav>
+
+                <!-- Cloud Status Indicator & Quick Actions -->
+                <div class="flex items-center gap-4">
+                    <div class="hidden sm:flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full text-xs text-slate-600">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span class="font-medium">Cloud Sync Active</span>
+                    </div>
+                    <button onclick="openBookingModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg text-sm transition shadow-sm">
+                        <i class="fa-solid fa-plus mr-1.5"></i> Quick Book
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- VIEW 1: PATIENT DISCOVERY & HOME -->
+        <section id="view-home" class="space-y-8">
+            <!-- Hero Banner -->
+            <div class="bg-gradient-to-r from-blue-700 to-indigo-800 rounded-2xl p-8 text-white shadow-xl relative overflow-hidden">
+                <div class="relative z-10 max-w-2xl">
+                    <span class="inline-block px-3 py-1 bg-white/20 backdrop-blur-md text-xs font-semibold rounded-full mb-4">Cloud-Powered Telehealth & In-Person Care</span>
+                    <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight mb-3">Instant Access to Healthcare Specialists, Anywhere.</h1>
+                    <p class="text-blue-100 text-sm sm:text-base mb-6">Book instant video consultations or physical hospital visits with certified medical practitioners in seconds.</p>
+                    <div class="flex flex-wrap gap-3">
+                        <button onclick="filterSpecialty('All')" class="bg-white text-blue-900 font-semibold px-5 py-2.5 rounded-lg text-sm shadow hover:bg-blue-50 transition">Explore All Specialists</button>
+                        <button onclick="switchTab('appointments')" class="bg-blue-600/60 hover:bg-blue-600 backdrop-blur-md text-white font-semibold px-5 py-2.5 rounded-lg text-sm transition">Manage My Appointments</button>
+                    </div>
+                </div>
+                <i class="fa-solid fa-stethoscope text-white/10 text-9xl absolute -right-6 -bottom-6 pointer-events-none"></i>
+            </div>
+
+            <!-- Search & Filters -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-4 justify-between items-center">
+                <!-- Search Bar -->
+                <div class="relative w-full md:w-96">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-slate-400"></i>
+                    <input type="text" id="search-input" onkeyup="filterDoctors()" placeholder="Search doctor by name, hospital, or field..." class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <!-- Specialty Category Filter -->
+                <div class="flex flex-wrap gap-2 w-full md:w-auto overflow-x-auto py-1" id="specialty-pills">
+                    <!-- Dynamic Pills Generated in JS -->
+                </div>
+            </div>
+
+            <!-- Doctor Directory Grid -->
+            <div>
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-slate-900">Available Doctors & Specialists</h2>
+                    <span id="doctor-count" class="text-xs text-slate-500 font-medium">Showing 6 Specialists</span>
+                </div>
+                <div id="doctor-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Doctor Cards injected dynamically -->
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 2: PATIENT APPOINTMENTS -->
+        <section id="view-appointments" class="hidden space-y-6">
+            <div class="flex justify-between items-center border-b border-slate-200 pb-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-900">My Saved Cloud Appointments</h2>
+                    <p class="text-sm text-slate-500">View appointment history, join video calls, and access check-in QR tickets.</p>
+                </div>
+                <button onclick="openBookingModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg text-sm transition">
+                    <i class="fa-solid fa-plus mr-1"></i> New Booking
+                </button>
+            </div>
+
+            <div id="appointments-list" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Dynamic Appointments injected here -->
+            </div>
+        </section>
+
+        <!-- VIEW 3: DOCTOR / ADMIN PORTAL -->
+        <section id="view-admin" class="hidden space-y-8">
+            <div class="bg-slate-900 text-white p-6 rounded-2xl shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <span class="text-xs text-teal-400 font-mono tracking-widest uppercase">Admin Analytics Portal</span>
+                    <h2 class="text-2xl font-bold">Cloud Practice Insights & Schedule</h2>
+                </div>
+                <button onclick="resetCloudData()" class="bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 px-3 py-1.5 rounded-lg text-xs transition">
+                    <i class="fa-solid fa-rotate-right mr-1"></i> Reset Cloud Mock DB
+                </button>
+            </div>
+
+            <!-- Stats KPI Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <div class="flex items-center justify-between text-slate-500 mb-2">
+                        <span class="text-xs font-semibold uppercase">Total Bookings</span>
+                        <i class="fa-solid fa-calendar-check text-blue-600 text-lg"></i>
+                    </div>
+                    <div class="text-2xl font-bold text-slate-900" id="stat-total">0</div>
+                    <span class="text-xs text-emerald-600 font-medium">Synced with Cloud</span>
+                </div>
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <div class="flex items-center justify-between text-slate-500 mb-2">
+                        <span class="text-xs font-semibold uppercase">Telehealth Calls</span>
+                        <i class="fa-solid fa-video text-teal-600 text-lg"></i>
+                    </div>
+                    <div class="text-2xl font-bold text-slate-900" id="stat-telehealth">0</div>
+                    <span class="text-xs text-slate-500 font-medium">Virtual Room</span>
+                </div>
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <div class="flex items-center justify-between text-slate-500 mb-2">
+                        <span class="text-xs font-semibold uppercase">In-Person Visits</span>
+                        <i class="fa-solid fa-hospital-user text-indigo-600 text-lg"></i>
+                    </div>
+                    <div class="text-2xl font-bold text-slate-900" id="stat-inperson">0</div>
+                    <span class="text-xs text-slate-500 font-medium">Clinic Checked-in</span>
+                </div>
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <div class="flex items-center justify-between text-slate-500 mb-2">
+                        <span class="text-xs font-semibold uppercase">Active Doctors</span>
+                        <i class="fa-solid fa-user-md text-amber-600 text-lg"></i>
+                    </div>
+                    <div class="text-2xl font-bold text-slate-900" id="stat-doctors">6</div>
+                    <span class="text-xs text-slate-500 font-medium">Across 6 Specialties</span>
+                </div>
+            </div>
+
+            <!-- Analytics Charts -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="text-sm font-bold text-slate-800 mb-4">Appointments Breakdown by Specialty</h3>
+                    <div class="h-64 relative">
+                        <canvas id="chart-specialties"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="text-sm font-bold text-slate-800 mb-4">Consultation Mode Ratio</h3>
+                    <div class="h-64 relative flex justify-center">
+                        <canvas id="chart-modes"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Master Table -->
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-5 border-b border-slate-200">
+                    <h3 class="text-sm font-bold text-slate-800">Master Cloud Appointments Ledger</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                        <thead class="bg-slate-50 text-slate-500 uppercase font-semibold">
+                            <tr>
+                                <th class="p-3">Ref ID</th>
+                                <th class="p-3">Patient</th>
+                                <th class="p-3">Doctor</th>
+                                <th class="p-3">Date & Time</th>
+                                <th class="p-3">Type</th>
+                                <th class="p-3">Status</th>
+                                <th class="p-3 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-table-body" class="divide-y divide-slate-100 font-medium">
+                            <!-- Dynamic Table Rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 4: TELEHEALTH ROOM (VIRTUAL CONSULTATION) -->
+        <section id="view-telehealth" class="hidden space-y-6">
+            <div class="flex justify-between items-center bg-slate-900 text-white p-4 rounded-xl">
+                <div class="flex items-center gap-3">
+                    <span class="w-3 h-3 rounded-full bg-red-500 animate-ping"></span>
+                    <div>
+                        <h2 class="text-base font-bold" id="tele-doctor-name">Live Telehealth Session</h2>
+                        <p class="text-xs text-slate-400" id="tele-patient-name">Patient Call ID: #0000</p>
+                    </div>
+                </div>
+                <button onclick="switchTab('appointments')" class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1.5 rounded-lg transition">
+                    Leave Call
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Main Video Stream -->
+                <div class="lg:col-span-2 bg-slate-900 rounded-2xl p-4 flex flex-col justify-between h-[450px] relative overflow-hidden shadow-2xl">
+                    <!-- Doctor Remote Stream Mock -->
+                    <div class="absolute inset-0 flex flex-col items-center justify-center bg-slate-800 text-slate-400">
+                        <i class="fa-solid fa-user-doctor text-7xl mb-3 text-blue-500/40"></i>
+                        <p class="text-sm font-medium">Doctor Video Stream Active</p>
+                        <span class="text-xs text-slate-500">Encrypted P2P Cloud Connection</span>
+                    </div>
+
+                    <!-- Patient Self View Camera PIP -->
+                    <div class="absolute bottom-4 right-4 w-40 h-28 bg-slate-900 border-2 border-white/20 rounded-xl overflow-hidden shadow-lg z-10 flex items-center justify-center">
+                        <video id="self-video" autoplay muted class="w-full h-full object-cover hidden"></video>
+                        <div id="self-video-placeholder" class="text-center text-slate-400">
+                            <i class="fa-solid fa-user text-2xl"></i>
+                            <p class="text-[10px]">You</p>
+                        </div>
+                    </div>
+
+                    <!-- Call Control Bar Overlay -->
+                    <div class="relative z-20 flex justify-center items-center gap-4 bg-slate-950/80 backdrop-blur-md p-3 rounded-xl w-max mx-auto border border-white/10 mt-auto">
+                        <button id="btn-mic" onclick="toggleMic()" class="w-10 h-10 rounded-full bg-slate-800 text-white hover:bg-slate-700 flex items-center justify-center transition">
+                            <i class="fa-solid fa-microphone"></i>
+                        </button>
+                        <button id="btn-cam" onclick="toggleCam()" class="w-10 h-10 rounded-full bg-slate-800 text-white hover:bg-slate-700 flex items-center justify-center transition">
+                            <i class="fa-solid fa-video"></i>
+                        </button>
+                        <button onclick="switchTab('appointments')" class="w-10 h-10 rounded-full bg-red-600 text-white hover:bg-red-700 flex items-center justify-center transition">
+                            <i class="fa-solid fa-phone-slash"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Live Consultation Notes Panel -->
+                <div class="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col justify-between shadow-sm">
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-900 border-b border-slate-200 pb-3 mb-4">
+                            <i class="fa-solid fa-clipboard-user text-blue-600 mr-1.5"></i> Clinical Notes & Prescription
+                        </h3>
+                        <div class="space-y-4 text-xs">
+                            <div>
+                                <label class="font-semibold text-slate-600 block mb-1">Doctor Remarks</label>
+                                <textarea id="tele-notes" rows="6" placeholder="Write prescription notes..." class="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="saveTelehealthNotes()" class="w-full mt-4 bg-teal-600 hover:bg-teal-700 text-white font-medium py-2 rounded-lg text-xs transition">
+                        Save Notes to Cloud Profile
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- BOOKING MODAL -->
+    <div id="modal-booking" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
+            <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
+                <h3 class="font-bold text-base flex items-center gap-2">
+                    <i class="fa-solid fa-calendar-plus text-blue-400"></i> Schedule Appointment
+                </h3>
+                <button onclick="closeBookingModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            
+            <form id="booking-form" onsubmit="handleBookingSubmit(event)" class="p-6 space-y-4">
+                <input type="hidden" id="form-doctor-id">
+                
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Doctor / Specialist</label>
+                    <input type="text" id="form-doctor-name" readonly class="w-full bg-slate-100 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold text-slate-700">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Patient Full Name</label>
+                        <input type="text" id="form-patient-name" required placeholder="John Doe" class="w-full border border-slate-200 rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Contact Email</label>
+                        <input type="email" id="form-patient-email" required placeholder="john@example.com" class="w-full border border-slate-200 rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Appointment Date</label>
+                        <input type="date" id="form-date" required class="w-full border border-slate-200 rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Time Slot</label>
+                        <select id="form-time" required class="w-full border border-slate-200 rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                            <option value="">Select Time</option>
+                            <option value="09:00 AM">09:00 AM</option>
+                            <option value="11:30 AM">11:30 AM</option>
+                            <option value="02:00 PM">02:00 PM</option>
+                            <option value="04:30 PM">04:30 PM</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Consultation Mode</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="flex items-center gap-2 border border-slate-200 rounded-lg p-3 cursor-pointer hover:bg-slate-50">
+                            <input type="radio" name="form-mode" value="Telehealth" checked class="text-blue-600">
+                            <div class="text-xs">
+                                <span class="font-bold block text-slate-800">Telehealth Call</span>
+                                <span class="text-slate-500 text-[10px]">Virtual Room</span>
+                            </div>
+                        </label>
+                        <label class="flex items-center gap-2 border border-slate-200 rounded-lg p-3 cursor-pointer hover:bg-slate-50">
+                            <input type="radio" name="form-mode" value="In-Person" class="text-blue-600">
+                            <div class="text-xs">
+                                <span class="font-bold block text-slate-800">In-Person Visit</span>
+                                <span class="text-slate-500 text-[10px]">Clinic Visit</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Symptom Description / Notes</label>
+                    <textarea id="form-symptoms" rows="2" placeholder="Briefly describe your symptoms..." class="w-full border border-slate-200 rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+                </div>
+
+                <div class="pt-2 flex justify-end gap-3">
+                    <button type="button" onclick="closeBookingModal()" class="px-4 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition">Confirm & Save to Cloud</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TICKET / QR MODAL -->
+    <div id="modal-ticket" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden text-center p-6 border border-slate-200">
+            <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3 text-xl">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <h3 class="font-bold text-slate-900 text-lg">Appointment Ticket</h3>
+            <p class="text-xs text-slate-500 mb-4">Cloud Digital Check-In Pass</p>
+            
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-4 flex justify-center">
+                <div id="qrcode"></div>
+            </div>
+
+            <div class="text-left text-xs space-y-2 mb-6 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                <div class="flex justify-between"><span class="text-slate-500">Ref Code:</span><span id="ticket-ref" class="font-mono font-bold text-slate-800">#000000</span></div>
+                <div class="flex justify-between"><span class="text-slate-500">Doctor:</span><span id="ticket-doctor" class="font-semibold text-slate-800">Dr. Name</span></div>
+                <div class="flex justify-between"><span class="text-slate-500">Date/Time:</span><span id="ticket-date" class="font-semibold text-slate-800">Date</span></div>
+            </div>
+
+            <div class="flex gap-2">
+                <button onclick="downloadTicketJSON()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 rounded-lg text-xs transition">
+                    <i class="fa-solid fa-download mr-1"></i> Pass JSON
+                </button>
+                <button onclick="closeTicketModal()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg text-xs transition">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN JAVASCRIPT APPLICATION LOGIC -->
+    <script>
+        // MOCK DOCTORS DATA
+        const DOCTORS = [
+            { id: 1, name: "Dr. Sarah Jenkins", specialty: "Cardiology", experience: "12 yrs exp", rating: 4.9, hospital: "City Heart Institute", image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=300" },
+            { id: 2, name: "Dr. Marcus Vance", specialty: "Dermatology", experience: "9 yrs exp", rating: 4.8, hospital: "Skin & Laser Center", image: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=300" },
+            { id: 3, name: "Dr. Elena Rostova", specialty: "Pediatrics", experience: "15 yrs exp", rating: 5.0, hospital: "Children Care Clinic", image: "https://images.unsplash.com/photo-1594824813571-24a69c100417?w=300" },
+            { id: 4, name: "Dr. Rajesh Patel", specialty: "Neurology", experience: "11 yrs exp", rating: 4.7, hospital: "Brain Health Center", image: "https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=300" },
+            { id: 5, name: "Dr. Olivia Chen", specialty: "Orthopedics", experience: "8 yrs exp", rating: 4.9, hospital: "Joint & Spine Care", image: "https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=300" },
+            { id: 6, name: "Dr. David Miller", specialty: "General Medicine", experience: "14 yrs exp", rating: 4.6, hospital: "Metro Health Hospital", image: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=300" }
+        ];
+
+        // SPECIALTIES
+        const SPECIALTIES = ["All", "Cardiology", "Dermatology", "Pediatrics", "Neurology", "Orthopedics", "General Medicine"];
+
+        // STATE MANAGEMENT (LOCAL STORAGE SIMULATING CLOUD DB)
+        let appointments = JSON.parse(localStorage.getItem('medicloud_appointments')) || [
+            {
+                id: 'MC-849201',
+                doctorId: 1,
+                doctorName: 'Dr. Sarah Jenkins',
+                patientName: 'Alice Smith',
+                patientEmail: 'alice@example.com',
+                date: '2026-11-15',
+                time: '10:00 AM',
+                mode: 'Telehealth',
+                symptoms: 'Routine cardiac checkup',
+                status: 'Confirmed',
+                createdAt: new Date().toISOString()
+            }
+        ];
+
+        let selectedSpecialty = 'All';
+        let currentTicketAppointment = null;
+        let chartSpecialtyInstance = null;
+        let chartModeInstance = null;
+
+        // INITIALIZATION
+        document.addEventListener('DOMContentLoaded', () => {
+            renderSpecialtyPills();
+            renderDoctors();
+            renderAppointments();
+            updateAdminDashboard();
+            setMinDate();
+        });
+
+        function setMinDate() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('form-date').setAttribute('min', today);
+        }
+
+        // NAVIGATION TABS
+        function switchTab(tab) {
+            ['home', 'appointments', 'admin', 'telehealth'].forEach(v => {
+                document.getElementById(`view-${v}`).classList.add('hidden');
+            });
+            document.getElementById(`view-${tab}`).classList.remove('hidden');
+
+            // Update Nav Active State
+            ['home', 'appointments', 'admin'].forEach(n => {
+                const navBtn = document.getElementById(`nav-${n}`);
+                if (navBtn) {
+                    if (n === tab) {
+                        navBtn.classList.add('text-blue-600', 'font-bold');
+                    } else {
+                        navBtn.classList.remove('text-blue-600', 'font-bold');
+                    }
+                }
+            });
+
+            if (tab === 'admin') {
+                updateAdminDashboard();
+            }
+        }
+
+        // RENDER SPECIALTY PILLS
+        function renderSpecialtyPills() {
+            const container = document.getElementById('specialty-pills');
+            container.innerHTML = SPECIALTIES.map(s => `
+                <button onclick="filterSpecialty('${s}')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${selectedSpecialty === s ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                    ${s}
+                </button>
+            `).join('');
+        }
+
+        function filterSpecialty(specialty) {
+            selectedSpecialty = specialty;
+            renderSpecialtyPills();
+            filterDoctors();
+        }
+
+        // RENDER DOCTOR CARDS
+        function filterDoctors() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const filtered = DOCTORS.filter(d => {
+                const matchesSpecialty = selectedSpecialty === 'All' || d.specialty === selectedSpecialty;
+                const matchesSearch = d.name.toLowerCase().includes(query) || d.specialty.toLowerCase().includes(query) || d.hospital.toLowerCase().includes(query);
+                return matchesSpecialty && matchesSearch;
+            });
+            renderDoctorGrid(filtered);
+        }
+
+        function renderDoctors() {
+            renderDoctorGrid(DOCTORS);
+        }
+
+        function renderDoctorGrid(doctorsList) {
+            const grid = document.getElementById('doctor-grid');
+            document.getElementById('doctor-count').innerText = `Showing ${doctorsList.length} Specialists`;
+            
+            if (doctorsList.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center py-12 text-slate-400">No doctors matching your search criteria.</div>`;
+                return;
+            }
+
+            grid.innerHTML = doctorsList.map(doc => `
+                <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col justify-between">
+                    <div class="p-5">
+                        <div class="flex items-center gap-4 mb-4">
+                            <img src="${doc.image}" alt="${doc.name}" class="w-16 h-16 rounded-xl object-cover border border-slate-100">
+                            <div>
+                                <span class="text-[10px] uppercase font-bold text-blue-600 tracking-wider bg-blue-50 px-2 py-0.5 rounded-full">${doc.specialty}</span>
+                                <h3 class="font-bold text-slate-900 text-base mt-1">${doc.name}</h3>
+                                <p class="text-xs text-slate-500">${doc.hospital}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between text-xs text-slate-500 border-t border-slate-100 pt-3">
+                            <span><i class="fa-solid fa-briefcase text-slate-400 mr-1"></i>${doc.experience}</span>
+                            <span class="text-amber-500 font-semibold"><i class="fa-solid fa-star mr-1"></i>${doc.rating}</span>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 p-4 border-t border-slate-100 flex gap-2">
+                        <button onclick="openBookingModal(${doc.id})" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg text-xs transition">
+                            Book Appointment
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // BOOKING MODAL & LOGIC
+        function openBookingModal(doctorId = 1) {
+            const doc = DOCTORS.find(d => d.id === doctorId) || DOCTORS[0];
+            document.getElementById('form-doctor-id').value = doc.id;
+            document.getElementById('form-doctor-name').value = `${doc.name} (${doc.specialty})`;
+            document.getElementById('modal-booking').classList.remove('hidden');
+        }
+
+        function closeBookingModal() {
+            document.getElementById('modal-booking').classList.add('hidden');
+            document.getElementById('booking-form').reset();
+        }
+
+        function handleBookingSubmit(e) {
+            e.preventDefault();
+            const doctorId = parseInt(document.getElementById('form-doctor-id').value);
+            const doctor = DOCTORS.find(d => d.id === doctorId);
+
+            const newAppointment = {
+                id: 'MC-' + Math.floor(100000 + Math.random() * 900000),
+                doctorId: doctor.id,
+                doctorName: doctor.name,
+                patientName: document.getElementById('form-patient-name').value,
+                patientEmail: document.getElementById('form-patient-email').value,
+                date: document.getElementById('form-date').value,
+                time: document.getElementById('form-time').value,
+                mode: document.querySelector('input[name="form-mode"]:checked').value,
+                symptoms: document.getElementById('form-symptoms').value || 'N/A',
+                status: 'Confirmed',
+                createdAt: new Date().toISOString()
+            };
+
+            appointments.unshift(newAppointment);
+            saveToStorage();
+            closeBookingModal();
+            renderAppointments();
+            openTicketModal(newAppointment);
+        }
+
+        function saveToStorage() {
+            localStorage.setItem('medicloud_appointments', JSON.stringify(appointments));
+        }
+
+        // RENDER PATIENT APPOINTMENTS
+        function renderAppointments() {
+            const list = document.getElementById('appointments-list');
+            if (appointments.length === 0) {
+                list.innerHTML = `<div class="col-span-full bg-white p-8 rounded-xl border border-slate-200 text-center text-slate-400">No appointments scheduled. Book one above!</div>`;
+                return;
+            }
+
+            list.innerHTML = appointments.map(app => `
+                <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="text-[10px] font-mono font-bold text-slate-400 uppercase">${app.id}</span>
+                            <h3 class="font-bold text-slate-900 text-base">${app.doctorName}</h3>
+                            <p class="text-xs text-slate-500">Patient: ${app.patientName}</p>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold ${app.mode === 'Telehealth' ? 'bg-teal-50 text-teal-700' : 'bg-indigo-50 text-indigo-700'}">
+                            ${app.mode}
+                        </span>
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded-lg text-xs space-y-1 text-slate-600 border border-slate-100">
+                        <div><i class="fa-regular fa-calendar mr-2 text-blue-600"></i>${app.date} at ${app.time}</div>
+                        <div><i class="fa-solid fa-notes-medical mr-2 text-blue-600"></i>${app.symptoms}</div>
+                    </div>
+                    <div class="flex gap-2 pt-2 border-t border-slate-100">
+                        ${app.mode === 'Telehealth' ? `
+                            <button onclick="startTelehealth('${app.id}')" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-semibold py-1.5 rounded-lg text-xs transition flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-video"></i> Join Telehealth Room
+                            </button>
+                        ` : ''}
+                        <button onclick='openTicketModal(${JSON.stringify(app)})' class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-1.5 rounded-lg text-xs transition">
+                            <i class="fa-solid fa-qrcode mr-1"></i> QR Check-In Pass
+                        </button>
+                        <button onclick="cancelAppointment('${app.id}')" class="px-3 bg-red-50 hover:bg-red-100 text-red-600 font-semibold rounded-lg text-xs transition">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function cancelAppointment(id) {
+            if (confirm('Cancel this appointment?')) {
+                appointments = appointments.filter(a => a.id !== id);
+                saveToStorage();
+                renderAppointments();
+            }
+        }
+
+        // QR TICKET GENERATOR
+        function openTicketModal(app) {
+            currentTicketAppointment = app;
+            document.getElementById('ticket-ref').innerText = app.id;
+            document.getElementById('ticket-doctor').innerText = app.doctorName;
+            document.getElementById('ticket-date').innerText = `${app.date} (${app.time})`;
+
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = '';
+            new QRCode(qrContainer, {
+                text: JSON.stringify({ id: app.id, patient: app.patientName, doctor: app.doctorName }),
+                width: 128,
+                height: 128
+            });
+
+            document.getElementById('modal-ticket').classList.remove('hidden');
+        }
+
+        function closeTicketModal() {
+            document.getElementById('modal-ticket').classList.add('hidden');
+        }
+
+        function downloadTicketJSON() {
+            if (!currentTicketAppointment) return;
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentTicketAppointment, null, 2));
+            const dlAnchorElem = document.createElement('a');
+            dlAnchorElem.setAttribute("href", dataStr);
+            dlAnchorElem.setAttribute("download", `Appointment-${currentTicketAppointment.id}.json`);
+            dlAnchorElem.click();
+        }
+
+        // TELEHEALTH ROOM LOGIC
+        function startTelehealth(appId) {
+            const app = appointments.find(a => a.id === appId);
+            if (!app) return;
+            document.getElementById('tele-doctor-name').innerText = `Live Consultation with ${app.doctorName}`;
+            document.getElementById('tele-patient-name').innerText = `Patient: ${app.patientName} | Ref ID: ${app.id}`;
+            document.getElementById('tele-notes').value = app.notes || '';
+            switchTab('telehealth');
+        }
+
+        let isCamOn = false;
+        let isMicOn = true;
+
+        async function toggleCam() {
+            const btn = document.getElementById('btn-cam');
+            const video = document.getElementById('self-video');
+            const placeholder = document.getElementById('self-video-placeholder');
+
+            if (!isCamOn) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    video.srcObject = stream;
+                    video.classList.remove('hidden');
+                    placeholder.classList.add('hidden');
+                    btn.classList.replace('bg-slate-800', 'bg-blue-600');
+                    isCamOn = true;
+                } catch (err) {
+                    alert('Camera access unavailable or denied. Showing placeholder stream.');
+                }
+            } else {
+                if (video.srcObject) {
+                    video.srcObject.getTracks().forEach(track => track.stop());
+                }
+                video.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+                btn.classList.replace('bg-blue-600', 'bg-slate-800');
+                isCamOn = false;
+            }
+        }
+
+        function toggleMic() {
+            const btn = document.getElementById('btn-mic');
+            isMicOn = !isMicOn;
+            if (isMicOn) {
+                btn.classList.replace('bg-red-600', 'bg-slate-800');
+            } else {
+                btn.classList.replace('bg-slate-800', 'bg-red-600');
+            }
+        }
+
+        function saveTelehealthNotes() {
+            alert('Clinical remarks updated & saved to cloud electronic health record (EHR).');
+        }
+
+        // ADMIN ANALYTICS DASHBOARD
+        function updateAdminDashboard() {
+            document.getElementById('stat-total').innerText = appointments.length;
+            document.getElementById('stat-telehealth').innerText = appointments.filter(a => a.mode === 'Telehealth').length;
+            document.getElementById('stat-inperson').innerText = appointments.filter(a => a.mode === 'In-Person').length;
+
+            // Render Master Table
+            const tbody = document.getElementById('admin-table-body');
+            tbody.innerHTML = appointments.map(a => `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="p-3 font-mono text-slate-500">${a.id}</td>
+                    <td class="p-3 text-slate-900 font-bold">${a.patientName}</td>
+                    <td class="p-3 text-slate-600">${a.doctorName}</td>
+                    <td class="p-3 text-slate-500">${a.date} ${a.time}</td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${a.mode === 'Telehealth' ? 'bg-teal-100 text-teal-800' : 'bg-indigo-100 text-indigo-800'}">${a.mode}</span></td>
+                    <td class="p-3"><span class="text-emerald-600 font-bold text-xs">${a.status}</span></td>
+                    <td class="p-3 text-right">
+                        <button onclick="cancelAppointment('${a.id}'); updateAdminDashboard();" class="text-red-600 hover:text-red-800 text-xs">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+
+            renderCharts();
+        }
+
+        function renderCharts() {
+            // Specialty breakdown
+            const specialtyCounts = {};
+            DOCTORS.forEach(d => specialtyCounts[d.specialty] = 0);
+            appointments.forEach(a => {
+                const doc = DOCTORS.find(d => d.name === a.doctorName);
+                if (doc) specialtyCounts[doc.specialty] = (specialtyCounts[doc.specialty] || 0) + 1;
+            });
+
+            const ctxSpec = document.getElementById('chart-specialties').getContext('2d');
+            if (chartSpecialtyInstance) chartSpecialtyInstance.destroy();
+            chartSpecialtyInstance = new Chart(ctxSpec, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(specialtyCounts),
+                    datasets: [{
+                        label: 'Appointments',
+                        data: Object.values(specialtyCounts),
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                }
+            });
+
+            // Mode breakdown
+            const teleCount = appointments.filter(a => a.mode === 'Telehealth').length;
+            const inPersonCount = appointments.filter(a => a.mode === 'In-Person').length;
+
+            const ctxMode = document.getElementById('chart-modes').getContext('2d');
+            if (chartModeInstance) chartModeInstance.destroy();
+            chartModeInstance = new Chart(ctxMode, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Telehealth', 'In-Person'],
+                    datasets: [{
+                        data: [teleCount, inPersonCount],
+                        backgroundColor: ['#0d9488', '#6366f1']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+        }
+
+        function resetCloudData() {
+            if (confirm('Reset mock database to initial state?')) {
+                localStorage.removeItem('medicloud_appointments');
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>
